@@ -107,8 +107,11 @@ Start Time     : 2024-06-25T14:03:12Z
 Restart Count  : 1
 Containers     : app, metrics
 --------------------------------------------
+if no pod is found, print a message indicating that no pods are available.
 """
 )
+
+
 
 # --- Agent 2: Collect Logs from Pods ---
 log_collector_agent = LlmAgent(
@@ -151,6 +154,9 @@ You must list pods in the cluster, collect logs, and generate RCA reports when i
         log_collector_agent
     ]
 )
+
+
+
 
 # Set this as the root agent to run the flow
 root_agent = Rubix_kube_agent

@@ -1,6 +1,6 @@
 from google.adk.agents import Agent, SequentialAgent, LlmAgent
 from kubernetes import client, config
-from typing import List, Dict
+from typing import List, Dict, Union
 
 # --- Tool 1: List Pods ---
 def list_pods() -> List[Dict]:
@@ -31,14 +31,17 @@ def list_pods() -> List[Dict]:
         print(f"An error occurred: {e}")
         return []
 
-# --- Tool 2: Collect Logs for Pods ---
-def collect_logs_for_pods(pods: List[Dict], num_lines: int = 5) -> List[Dict]:
+# --- Tool 2: Collect Logs for Pods (Refactored) ---
+def collect_logs_for_pods(pod_inputs: List[Dict[str, Union[str, List[str]]]], num_lines: int = 5) -> List[Dict]:
+    """
+    pod_inputs: List of dicts like {"name": str, "namespace": str, "containers": List[str]}
+    """
     try:
         config.load_kube_config()
         v1 = client.CoreV1Api()
         logs_list: List[Dict] = []
 
-        for pod in pods:
+        for pod in pod_inputs:
             pod_name = pod["name"]
             namespace = pod["namespace"]
             container_names = pod["containers"]
@@ -111,8 +114,6 @@ if no pod is found, print a message indicating that no pods are available.
 """
 )
 
-
-
 # --- Agent 2: Collect Logs from Pods ---
 log_collector_agent = LlmAgent(
     name="LogCollectorAgent",
@@ -123,14 +124,13 @@ log_collector_agent = LlmAgent(
     instruction="""
 You are a Kubernetes log collection agent.
 
-Use the {pods} (from the output of the PodListingAgent) as input.
+Take the list of pods from the output of the PodListingAgent.
+Prepare a list of dictionaries with keys: `name`, `namespace`, and `containers`.
 
-For each pod:
-- Use `pod['name']`, `pod['namespace']`
-- For each container in `pod['containers']`, collect the first 5–10 lines of logs using the `collect_logs_for_pods` tool
+Use the `collect_logs_for_pods` tool by passing this list as `pod_inputs`.
 
-Return logs in this format:
-
+For each pod and container:
+- Print logs like:
 Pod Name       : <pod-name>
 Namespace      : <namespace>
 Container Name : <container-name>
@@ -154,9 +154,6 @@ You must list pods in the cluster, collect logs, and generate RCA reports when i
         log_collector_agent
     ]
 )
-
-
-
 
 # Set this as the root agent to run the flow
 root_agent = Rubix_kube_agent
